@@ -14,9 +14,9 @@ async function handleCheckSubmit(event) {
     event.preventDefault();
 
     const input = document.getElementById('dni-input');
-    const rawValue = input.value.trim();
+    const rawValue = String(input.value || '').trim();
 
-    // Normalizar: conservar solo dígitos
+    // DNI tratado estrictamente como CADENA DE TEXTO / IDENTIFICADOR (solo dígitos)
     const cleanDni = rawValue.replace(/\D/g, '');
 
     if (!cleanDni) {
@@ -28,15 +28,15 @@ async function handleCheckSubmit(event) {
     setLoading(true);
 
     try {
-        // Primera consulta: por DNI
+        // Consulta por DNI al Apps Script
         let response = await fetch(`${API_URL}?dni=${encodeURIComponent(cleanDni)}`);
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}`);
         }
         let data = await response.json();
 
-        // Fallback: Si el script backend requiere parametro 'nombre', reintentar con comodín
-        if (!data.success && data.message && data.message.includes('Parámetros faltantes')) {
+        // Si la versión actual del script requiere nombre, reintentar con comodín '*'
+        if (!data.success && data.message && (data.message.includes('faltantes') || data.message.includes('obligatorios'))) {
             response = await fetch(`${API_URL}?dni=${encodeURIComponent(cleanDni)}&nombre=*`);
             if (response.ok) {
                 data = await response.json();
@@ -45,7 +45,7 @@ async function handleCheckSubmit(event) {
 
         processResult(data);
     } catch (error) {
-        console.error('[ComprobarAfiliados] Error:', error);
+        console.error('[ComprobarAfiliados] Error de consulta:', error);
         showModal(
             'state-error',
             'ERROR DE CONEXIÓN',
