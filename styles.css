@@ -1,0 +1,420 @@
+:root {
+    --bg-dark: #0D1B2A;
+    --wav-blue: #1565C0;
+    --golden-btn: #FFC107;
+    --field-bg: #F5F5F5;
+    --hint-color: #9E9E9E;
+    --text-white: #FFFFFF;
+    --text-dark: #212121;
+    --font-main: 'Hanken Grotesk', sans-serif;
+    --font-title: 'Outfit', sans-serif;
+
+    /* Status Colors */
+    --active-green: #2E7D32;
+    --active-green-bg: #E8F5E9;
+    --active-green-border: #A5D6A7;
+
+    --inactive-red: #C62828;
+    --inactive-red-bg: #FFEBEE;
+    --inactive-red-border: #EF9A9A;
+
+    --notfound-orange: #E65100;
+    --notfound-orange-bg: #FFF3E0;
+    --notfound-orange-border: #FFCC80;
+
+    --error-amber: #D84315;
+    --error-amber-bg: #FBE9E7;
+    --error-amber-border: #FFAB91;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: hidden;
+    padding: 16px;
+}
+
+.app-wrapper {
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+/* Wave Header */
+.wave-container {
+    height: 220px;
+    width: 100%;
+    position: relative;
+    overflow: visible;
+}
+
+.wave-svg {
+    width: 100%;
+    height: 100%;
+    fill: var(--wav-blue);
+}
+
+.logo-circle {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+.logo-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Main Card */
+.main-card {
+    width: 100%;
+    padding: 24px 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: -10px;
+    z-index: 10;
+}
+
+.card-header {
+    text-align: center;
+}
+
+.title-h1 {
+    font-family: var(--font-title);
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-white);
+}
+
+.subtitle-text {
+    font-size: 14px;
+    color: #B0BEC5;
+    line-height: 1.5;
+}
+
+/* Form & Inputs */
+#check-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input-group {
+    position: relative;
+    width: 100%;
+}
+
+.input-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #616161;
+    font-size: 24px;
+}
+
+.input-field {
+    width: 100%;
+    height: 56px;
+    background-color: var(--field-bg);
+    border: 2px solid transparent;
+    border-radius: 28px;
+    padding: 0 20px 0 56px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-dark);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-family: var(--font-main);
+    letter-spacing: 0.03em;
+}
+
+.input-field:focus {
+    border-color: var(--wav-blue);
+    box-shadow: 0 0 0 4px rgba(21, 101, 192, 0.25);
+    background-color: #FFFFFF;
+}
+
+.input-field::placeholder {
+    color: var(--hint-color);
+    font-weight: 400;
+    font-size: 15px;
+}
+
+/* Gold Button */
+.btn-gold {
+    width: 100%;
+    height: 56px;
+    background-color: var(--golden-btn);
+    border: none;
+    border-radius: 28px;
+    font-size: 18px;
+    font-weight: 800;
+    color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(255, 193, 7, 0.35);
+    cursor: pointer;
+    outline: none;
+    font-family: var(--font-main);
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.btn-gold:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+}
+
+.btn-gold:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Spinner */
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(0, 0, 0, 0.2);
+    border-top-color: #000000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Footer */
+.card-footer {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.small-hint {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* Modal Result Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-card {
+    background: #FFFFFF;
+    color: var(--text-dark);
+    border-radius: 24px;
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: scale(0.9);
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-overlay.active .modal-card {
+    transform: scale(1);
+}
+
+.status-badge-container {
+    margin-bottom: 16px;
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.icon-circle span {
+    font-size: 48px;
+}
+
+.modal-title {
+    font-family: var(--font-title);
+    font-size: 18px;
+    font-weight: 700;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px;
+}
+
+/* Status Box */
+.status-box {
+    width: 100%;
+    padding: 16px 20px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+    border: 2px solid transparent;
+}
+
+.status-text {
+    font-family: var(--font-title);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+
+/* Status Variants */
+/* ACTIVO */
+.modal-card.state-activo .icon-circle {
+    background: var(--active-green-bg);
+    color: var(--active-green);
+}
+.modal-card.state-activo .status-box {
+    background: var(--active-green-bg);
+    border-color: var(--active-green-border);
+    color: var(--active-green);
+}
+
+/* INACTIVO */
+.modal-card.state-inactivo .icon-circle {
+    background: var(--inactive-red-bg);
+    color: var(--inactive-red);
+}
+.modal-card.state-inactivo .status-box {
+    background: var(--inactive-red-bg);
+    border-color: var(--inactive-red-border);
+    color: var(--inactive-red);
+}
+
+/* NOT FOUND */
+.modal-card.state-notfound .icon-circle {
+    background: var(--notfound-orange-bg);
+    color: var(--notfound-orange);
+}
+.modal-card.state-notfound .status-box {
+    background: var(--notfound-orange-bg);
+    border-color: var(--notfound-orange-border);
+    color: var(--notfound-orange);
+}
+
+/* DUPLICADO / ERROR */
+.modal-card.state-error .icon-circle {
+    background: var(--error-amber-bg);
+    color: var(--error-amber);
+}
+.modal-card.state-error .status-box {
+    background: var(--error-amber-bg);
+    border-color: var(--error-amber-border);
+    color: var(--error-amber);
+}
+
+.modal-message {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+.btn-modal-close {
+    width: 100%;
+    height: 48px;
+    border-radius: 24px;
+    border: none;
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--font-main);
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-modal-close:active {
+    background-color: var(--wav-blue);
+}
+
+/* Toast Snackbar */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 20px;
+    right: 20px;
+    max-width: 400px;
+    margin: 0 auto;
+    background-color: #D32F2F;
+    color: white;
+    padding: 14px 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 2000;
+    transform: translateY(150%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.toast.show {
+    transform: translateY(0);
+}

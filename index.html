@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <title>Comprobación de Afiliados — Sindicato de la Carne</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+    <meta name="description" content="Herramienta de comprobación rápida de estado de afiliados para comercios y establecimientos."/>
+    <link rel="icon" type="image/png" href="logo.png"/>
+    <link rel="apple-touch-icon" href="logo.png"/>
+    
+    <!-- Google Fonts & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet"/>
+    
+    <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <!-- Top wave header decoration -->
+        <div class="wave-container">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="wave-svg">
+                <path d="M0,0 L100,0 L100,60 Q50,105 0,60 Z"/>
+            </svg>
+            <div class="logo-circle">
+                <img src="logo.png" alt="Sindicato de la Carne Logo"/>
+            </div>
+        </div>
+
+        <!-- Main Card Container -->
+        <main class="main-card">
+            <header class="card-header">
+                <h1 class="title-h1">Comprobación de Afiliados</h1>
+                <p class="subtitle-text">Ingrese el DNI del afiliado para verificar la vigencia de su credencial.</p>
+            </header>
+
+            <form id="check-form" onsubmit="handleCheckSubmit(event)" novalidate>
+                <!-- DNI Input -->
+                <div class="input-group">
+                    <span class="material-symbols-outlined input-icon">badge</span>
+                    <input 
+                        id="dni-input" 
+                        type="tel" 
+                        pattern="[0-9]*" 
+                        inputmode="numeric" 
+                        class="input-field" 
+                        placeholder="Ingrese el DNI (solo números)" 
+                        autocomplete="off"
+                        maxlength="12"
+                        required
+                    />
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="btn-submit" class="btn-gold">
+                    <span id="btn-text">COMPROBAR</span>
+                    <div id="btn-spinner" class="spinner" style="display: none;"></div>
+                </button>
+            </form>
+
+            <footer class="card-footer">
+                <p>Sindicato de la Carne — Colón</p>
+                <p class="small-hint">Verificación instantánea para comercios y convenios</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- RESULT MODAL DIALOG -->
+    <div id="result-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div id="status-badge-container" class="status-badge-container">
+                <div id="status-icon-circle" class="icon-circle">
+                    <span id="status-icon" class="material-symbols-outlined">check_circle</span>
+                </div>
+            </div>
+
+            <h2 id="modal-title" class="modal-title">Comprobación de Afiliado</h2>
+            
+            <!-- Result Main Status Box -->
+            <div id="status-box" class="status-box">
+                <span id="status-text" class="status-text">ACTIVO</span>
+            </div>
+
+            <!-- Subtitle / message explanation -->
+            <p id="modal-message" class="modal-message">
+                El afiliado se encuentra vigente para acceder a los beneficios.
+            </p>
+
+            <!-- Close Action Button -->
+            <button onclick="closeModal()" class="btn-modal-close">CERRAR</button>
+        </div>
+    </div>
+
+    <!-- SNACKBAR TOAST ERROR -->
+    <div id="toast" class="toast">
+        <span class="material-symbols-outlined">info</span>
+        <span id="toast-message">Por favor ingrese un DNI válido.</span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
