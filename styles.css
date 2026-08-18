@@ -1,13 +1,19 @@
 :root {
-    --bg-dark: #0D1B2A;
-    --wav-blue: #1565C0;
-    --golden-btn: #FFC107;
-    --field-bg: #F5F5F5;
-    --hint-color: #9E9E9E;
-    --text-white: #FFFFFF;
-    --text-dark: #212121;
-    --font-main: 'Hanken Grotesk', sans-serif;
-    --font-title: 'Outfit', sans-serif;
+    --primary: #1E5FAF;
+    --primary-dark: #164A8C;
+    --primary-light: #4A91CC;
+    --secondary: #25A9D6;
+    --secondary-light: #69C5E3;
+    --bg-color: #E6EEF4;
+    --surface: #F1FAFC;
+    --surface-card: #FFFFFF;
+    --text-main: #16324F;
+    --text-secondary: #60758A;
+    --border-color: #C8DDE5;
+    --field-bg: #FFFFFF;
+    --hint-color: #8E9FAA;
+    --font-main: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-title: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
 
     /* Status Colors */
     --active-green: #2E7D32;
@@ -38,8 +44,8 @@
 
 body {
     font-family: var(--font-main);
-    background-color: var(--bg-dark);
-    color: var(--text-white);
+    background-color: var(--bg-color);
+    color: var(--text-main);
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -68,7 +74,7 @@ body {
 .wave-svg {
     width: 100%;
     height: 100%;
-    fill: var(--wav-blue);
+    fill: var(--primary);
 }
 
 .logo-circle {
@@ -79,30 +85,36 @@ body {
     width: 150px;
     height: 150px;
     border-radius: 50%;
-    background: white;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    background: #FFFFFF;
+    box-shadow: 0 10px 28px rgba(22, 50, 79, 0.16);
+    border: 3px solid #FFFFFF;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 20;
+    padding: 12px;
 }
 
 .logo-circle img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 /* Main Card */
 .main-card {
     width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
     padding: 24px 28px 32px;
     display: flex;
     flex-direction: column;
     gap: 24px;
     margin-top: -10px;
     z-index: 10;
+    box-shadow: 0 10px 30px -5px rgba(22, 50, 79, 0.08);
 }
 
 .card-header {
@@ -111,16 +123,17 @@ body {
 
 .title-h1 {
     font-family: var(--font-title);
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 700;
     margin-bottom: 8px;
-    color: var(--text-white);
+    color: var(--text-main);
 }
 
 .subtitle-text {
     font-size: 14px;
-    color: #B0BEC5;
+    color: var(--text-secondary);
     line-height: 1.5;
+    font-weight: 500;
 }
 
 /* Form & Inputs */
@@ -140,7 +153,7 @@ body {
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
-    color: #616161;
+    color: var(--primary);
     font-size: 24px;
 }
 
@@ -148,22 +161,22 @@ body {
     width: 100%;
     height: 56px;
     background-color: var(--field-bg);
-    border: 2px solid transparent;
+    border: 1.5px solid var(--border-color);
     border-radius: 28px;
     padding: 0 20px 0 56px;
     font-size: 17px;
     font-weight: 600;
-    color: var(--text-dark);
+    color: var(--text-main);
     outline: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
     font-family: var(--font-main);
     letter-spacing: 0.03em;
+    box-shadow: 0 2px 6px rgba(22, 50, 79, 0.03);
 }
 
 .input-field:focus {
-    border-color: var(--wav-blue);
-    box-shadow: 0 0 0 4px rgba(21, 101, 192, 0.25);
-    background-color: #FFFFFF;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(30, 95, 175, 0.12);
 }
 
 .input-field::placeholder {
@@ -172,29 +185,29 @@ body {
     font-size: 15px;
 }
 
-/* Gold Button */
+/* Button */
 .btn-gold {
     width: 100%;
     height: 56px;
-    background-color: var(--golden-btn);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     border: none;
     border-radius: 28px;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 800;
-    color: rgba(0, 0, 0, 0.85);
+    color: #FFFFFF;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 16px rgba(255, 193, 7, 0.35);
+    box-shadow: 0 4px 14px rgba(30, 95, 175, 0.25);
     cursor: pointer;
     outline: none;
     font-family: var(--font-main);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
 .btn-gold:active {
-    opacity: 0.85;
+    opacity: 0.9;
     transform: scale(0.98);
 }
 
@@ -208,8 +221,8 @@ body {
 .spinner {
     width: 24px;
     height: 24px;
-    border: 3px solid rgba(0, 0, 0, 0.2);
-    border-top-color: #000000;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #FFFFFF;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -221,16 +234,19 @@ body {
 /* Footer */
 .card-footer {
     text-align: center;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    font-weight: 600;
 }
 
 .small-hint {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.25);
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.85;
+    font-weight: 400;
 }
 
 /* Modal Result Overlay */
@@ -240,9 +256,9 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background-color: rgba(22, 50, 79, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 1000;
     display: none;
     align-items: center;
@@ -258,14 +274,15 @@ body {
 }
 
 .modal-card {
-    background: #FFFFFF;
-    color: var(--text-dark);
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
     border-radius: 24px;
     padding: 32px 24px;
     width: 100%;
     max-width: 360px;
     text-align: center;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 20px 40px rgba(22, 50, 79, 0.18);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -297,9 +314,9 @@ body {
 
 .modal-title {
     font-family: var(--font-title);
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
-    color: #64748B;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 16px;
@@ -316,7 +333,7 @@ body {
 
 .status-text {
     font-family: var(--font-title);
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 800;
     letter-spacing: 0.05em;
 }
@@ -368,9 +385,10 @@ body {
 
 .modal-message {
     font-size: 14px;
-    color: #475569;
+    color: var(--text-secondary);
     line-height: 1.5;
     margin-bottom: 24px;
+    font-weight: 500;
 }
 
 .btn-modal-close {
@@ -378,18 +396,20 @@ body {
     height: 48px;
     border-radius: 24px;
     border: none;
-    background-color: var(--bg-dark);
-    color: var(--text-white);
+    background: var(--primary);
+    color: #FFFFFF;
     font-size: 16px;
     font-weight: 700;
     font-family: var(--font-main);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 4px 12px rgba(30, 95, 175, 0.2);
 }
 
 .btn-modal-close:active {
-    background-color: var(--wav-blue);
+    background: var(--primary-dark);
+    transform: scale(0.99);
 }
 
 /* Toast Snackbar */
@@ -403,8 +423,8 @@ body {
     background-color: #D32F2F;
     color: white;
     padding: 14px 20px;
-    border-radius: 12px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+    border-radius: 14px;
+    box-shadow: 0 10px 24px rgba(211, 47, 47, 0.25);
     display: flex;
     align-items: center;
     gap: 12px;
