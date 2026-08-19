@@ -1,14 +1,19 @@
 /**
  * ============================================================
  *  Web de Comprobación de Estado de Afiliados
- *  Sindicato de la Carne, Colón
+ *  Mi Credencial Online
+ *  Motor de Consulta Manual + Verificación de Códigos QR
  * ============================================================
  */
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbzwlmFPZRNYVtnGzGegkwC6ozoyDu9OEc0kauSa-kCGUMuZieU9vN8k86l9NemhJsCZ/exec';
 
+// ============================================================
+// 1. FLUJO MANUAL DE CONSULTA POR DNI (PRESERVADO AL 100%)
+// ============================================================
+
 /**
- * Maneja el envío del formulario de consulta
+ * Maneja el envío del formulario de consulta manual
  */
 async function handleCheckSubmit(event) {
     event.preventDefault();
@@ -58,7 +63,7 @@ async function handleCheckSubmit(event) {
 }
 
 /**
- * Procesa la respuesta de Google Sheets y determina el estado
+ * Procesa la respuesta de Google Sheets y determina el estado para consulta manual
  */
 function processResult(data) {
     // 1. Detectar duplicados o inconsistencia explícita
@@ -127,10 +132,344 @@ function processResult(data) {
     );
 }
 
+// ============================================================
+// 2. MOTOR DE VERIFICACIÓN DE CÓDIGO QR (FASE B1)
+// ============================================================
+
 /**
- * Convierte un string de fecha (DD/MM/YYYY, MM/YYYY, YYYY-MM-DD)
- * en un objeto Date representando el ÚLTIMO MILISEGUNDO del día de vencimiento.
- * Esto garantiza que el afiliado siga ACTIVO durante todo el día indicado.
+ * Normaliza cadenas de texto para comparación segura
+ */
+function normalizeText(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, ' ');
+}
+
+/**
+ * Normaliza número de afiliado preservando caracteres como '/'
+ */
+function normalizeAffiliateNumber(affiliate) {
+    if (affiliate === null || affiliate === undefined) return '';
+    return String(affiliate).trim().toUpperCase().replace(/\s+/g, '');
+}
+
+/**
+ * Normaliza fechas a formato ISO YYYY-MM-DD
+ */
+function normalizeToIsoDate(vtoStr) {
+    if (!vtoStr) return '';
+    const d = parseExpirationDate(vtoStr);
+    if (!d || isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Valida y parsea la cadena JSON del QR de forma controlada
+ */
+function parseQrPayload(rawInput) {
+    if (rawInput === null || rawInput === undefined) {
+        return { valid: false, error: 'No se recibieron datos de código QR.' };
+    }
+
+    let parsed;
+    if (typeof rawInput === 'object') {
+        parsed = rawInput;
+    } else if (typeof rawInput === 'string') {
+        const trimmed = rawInput.trim();
+        if (!trimmed) {
+            return { valid: false, error: 'El contenido del código QR está vacío.' };
+        }
+        try {
+            parsed = JSON.parse(trimmed);
+        } catch (e) {
+            return { valid: false, error: 'El contenido no es un JSON válido.' };
+        }
+    } else {
+        return { valid: false, error: 'Tipo de dato de QR no soportado.' };
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return { valid: false, error: 'Estructura de QR no válida.' };
+    }
+
+    // Comprobar campos obligatorios
+    const requiredFields = ['dni', 'nombre', 'afiliado', 'establecimiento', 'vto'];
+    for (const field of requiredFields) {
+        if (!(field in parsed) || parsed[field] === null || parsed[field] === undefined) {
+            return { valid: false, error: `Campo obligatorio ausente en el QR: "${field}".` };
+        }
+    }
+
+    const dniStr = String(parsed.dni).trim();
+    const cleanDni = dniStr.replace(/\D/g, '');
+    if (!cleanDni || !/^\d{6,12}$/.test(cleanDni)) {
+        return { valid: false, error: 'El campo DNI en el QR no contiene un formato numérico válido.' };
+    }
+
+    const nombreStr = String(parsed.nombre).trim();
+    if (!nombreStr) {
+        return { valid: false, error: 'El campo nombre en el QR está vacío.' };
+    }
+
+    const afiliadoStr = String(parsed.afiliado).trim();
+    if (!afiliadoStr) {
+        return { valid: false, error: 'El campo número de afiliado en el QR está vacío.' };
+    }
+
+    const estabStr = String(parsed.establecimiento).trim();
+    if (!estabStr) {
+        return { valid: false, error: 'El campo establecimiento en el QR está vacío.' };
+    }
+
+    const vtoStr = String(parsed.vto).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(vtoStr) && !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(vtoStr) && !/^\d{1,2}\/\d{4}$/.test(vtoStr)) {
+        return { valid: false, error: 'El campo fecha de vencimiento en el QR no posee un formato reconocido.' };
+    }
+
+    return {
+        valid: true,
+        payload: {
+            dni: cleanDni,
+            nombre: nombreStr,
+            afiliado: afiliadoStr,
+            establecimiento: estabStr,
+            vto: vtoStr
+        }
+    };
+}
+
+/**
+ * Punto de entrada principal para procesar y verificar un código QR (JSON)
+ */
+async function handleQrPayload(rawJson) {
+    const parseResult = parseQrPayload(rawJson);
+
+    // 1. Si el QR no contiene una estructura válida, mostrar error sin consultar backend
+    if (!parseResult.valid) {
+        showQrResultModal({
+            status: 'INVALID_QR',
+            title: 'CREDENCIAL NO VÁLIDA',
+            message: parseResult.error,
+            checks: null
+        });
+        return { success: false, reason: parseResult.error };
+    }
+
+    const qrData = parseResult.payload;
+    const cleanDni = qrData.dni;
+
+    setQrLoading(true);
+
+    try {
+        // 2. Reutilizar la consulta exacta existente al Google Apps Script
+        let response = await fetch(`${API_URL}?dni=${encodeURIComponent(cleanDni)}`);
+        if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status}`);
+        }
+        let dbData = await response.json();
+
+        // Fallback transparente si se solicita nombre
+        if (!dbData.success && dbData.message && (dbData.message.includes('faltantes') || dbData.message.includes('obligatorios'))) {
+            response = await fetch(`${API_URL}?dni=${encodeURIComponent(cleanDni)}&nombre=*`);
+            if (response.ok) {
+                dbData = await response.json();
+            }
+        }
+
+        // 3. Comparar los datos del QR contra la respuesta de la base de datos
+        return verifyQrAgainstDb(qrData, dbData, cleanDni);
+    } catch (error) {
+        console.error('[ComprobarAfiliados - QR] Error de consulta:', error);
+        showQrResultModal({
+            status: 'CONNECTION_ERROR',
+            title: 'ERROR DE CONEXIÓN',
+            message: 'No fue posible realizar la comprobación contra la base de datos. Verifique su conexión.',
+            checks: null
+        });
+        return { success: false, reason: 'Error de conexión' };
+    } finally {
+        setQrLoading(false);
+    }
+}
+
+/**
+ * Compara los datos del QR contra los devueltos por Google Apps Script
+ */
+function verifyQrAgainstDb(qrPayload, dbData, queriedDni) {
+    // 1. Caso Duplicados / Inconsistencia en la base
+    if (dbData.duplicate === true || (dbData.message && (dbData.message.includes('duplicad') || dbData.message.includes('múltiples')))) {
+        showQrResultModal({
+            status: 'DUPLICATE',
+            title: 'NO DETERMINADO',
+            message: 'No se pudo validar la credencial debido a registros múltiples en la base de datos.',
+            checks: null
+        });
+        return { success: false, reason: 'Registros duplicados en base de datos' };
+    }
+
+    // 2. Caso Afiliado no encontrado en la base
+    if (!dbData.success) {
+        showQrResultModal({
+            status: 'NOT_FOUND',
+            title: 'CREDENCIAL NO VÁLIDA',
+            message: 'El DNI de la credencial no figura en el registro oficial de afiliados.',
+            checks: {
+                dni: false,
+                active: false,
+                nombre: false,
+                afiliado: false,
+                establecimiento: false,
+                vto: false
+            }
+        });
+        return { success: false, reason: 'Afiliado no encontrado' };
+    }
+
+    // 3. Afiliado encontrado: evaluar vigencia
+    const vtoDbRaw = dbData.vto || '';
+    const expirationEnd = parseExpirationDate(vtoDbRaw);
+    const now = new Date();
+    const isDateValid = expirationEnd !== null && !isNaN(expirationEnd.getTime());
+    const isNotExpired = isDateValid && now <= expirationEnd;
+
+    // 4. Comparar cada campo
+    const dniMatches = queriedDni === qrPayload.dni;
+    const nameMatches = normalizeText(qrPayload.nombre) === normalizeText(dbData.nombre);
+    const affiliateMatches = normalizeAffiliateNumber(qrPayload.afiliado) === normalizeAffiliateNumber(dbData.nroAfiliado);
+    const establishmentMatches = normalizeText(qrPayload.establecimiento) === normalizeText(dbData.establecimiento);
+    
+    // Comparación de fechas normalizadas ISO (YYYY-MM-DD)
+    const qrIsoDate = normalizeToIsoDate(qrPayload.vto);
+    const dbIsoDate = normalizeToIsoDate(vtoDbRaw);
+    const vtoMatches = qrIsoDate !== '' && dbIsoDate !== '' && qrIsoDate === dbIsoDate;
+
+    const checks = {
+        active: isNotExpired,
+        dni: dniMatches,
+        nombre: nameMatches,
+        afiliado: affiliateMatches,
+        establecimiento: establishmentMatches,
+        vto: vtoMatches
+    };
+
+    const allMatch = checks.active && checks.dni && checks.nombre && checks.afiliado && checks.establecimiento && checks.vto;
+
+    if (allMatch) {
+        showQrResultModal({
+            status: 'VALID',
+            title: 'CREDENCIAL VÁLIDA',
+            message: 'Todos los datos coinciden con el registro oficial y la credencial está vigente.',
+            checks: checks,
+            data: dbData
+        });
+        return { success: true, checks: checks };
+    }
+
+    // Determinar motivo descriptivo del fallo
+    let failureReason = 'Los datos presentados no coinciden con los registros actuales.';
+    if (!isNotExpired) {
+        failureReason = 'La credencial se encuentra vencida en el registro oficial.';
+    } else if (!nameMatches) {
+        failureReason = 'El nombre de la credencial no coincide con el registro oficial.';
+    } else if (!affiliateMatches) {
+        failureReason = 'El número de afiliado no coincide con el registro oficial.';
+    } else if (!establishmentMatches) {
+        failureReason = 'El establecimiento indicado no coincide con el registro oficial.';
+    } else if (!vtoMatches) {
+        failureReason = 'La fecha de vencimiento no coincide con el registro oficial.';
+    }
+
+    showQrResultModal({
+        status: 'INVALID',
+        title: 'CREDENCIAL NO VÁLIDA',
+        message: failureReason,
+        checks: checks,
+        data: dbData
+    });
+
+    return { success: false, reason: failureReason, checks: checks };
+}
+
+/**
+ * Renderiza el modal de resultados específico para verificación QR
+ */
+function showQrResultModal(result) {
+    const modal = document.getElementById('result-modal');
+    const card = modal.querySelector('.modal-card');
+    const icon = document.getElementById('status-icon');
+    const statusEl = document.getElementById('status-text');
+    const msgEl = document.getElementById('modal-message');
+    const checklistContainer = document.getElementById('qr-checklist-container');
+
+    // Limpiar clases
+    card.className = 'modal-card';
+
+    if (result.status === 'VALID') {
+        card.classList.add('state-activo');
+        icon.textContent = 'verified_user';
+        statusEl.textContent = 'CREDENCIAL VÁLIDA';
+    } else if (result.status === 'DUPLICATE' || result.status === 'CONNECTION_ERROR') {
+        card.classList.add('state-error');
+        icon.textContent = result.status === 'CONNECTION_ERROR' ? 'cloud_off' : 'warning';
+        statusEl.textContent = result.title;
+    } else {
+        card.classList.add('state-inactivo');
+        icon.textContent = 'gpp_bad';
+        statusEl.textContent = 'CREDENCIAL NO VÁLIDA';
+    }
+
+    msgEl.textContent = result.message;
+
+    // Renderizar checklist si existen comparaciones
+    if (result.checks && checklistContainer) {
+        checklistContainer.style.display = 'flex';
+        checklistContainer.innerHTML = `
+            <div class="checklist-grid">
+                <div class="check-item ${result.checks.active ? 'pass' : 'fail'}">
+                    <span class="material-symbols-outlined">${result.checks.active ? 'check_circle' : 'cancel'}</span>
+                    <span>Vigencia activa</span>
+                </div>
+                <div class="check-item ${result.checks.dni ? 'pass' : 'fail'}">
+                    <span class="material-symbols-outlined">${result.checks.dni ? 'check_circle' : 'cancel'}</span>
+                    <span>DNI verificado</span>
+                </div>
+                <div class="check-item ${result.checks.nombre ? 'pass' : 'fail'}">
+                    <span class="material-symbols-outlined">${result.checks.nombre ? 'check_circle' : 'cancel'}</span>
+                    <span>Nombre y Apellido</span>
+                </div>
+                <div class="check-item ${result.checks.afiliado ? 'pass' : 'fail'}">
+                    <span class="material-symbols-outlined">${result.checks.afiliado ? 'check_circle' : 'cancel'}</span>
+                    <span>N° de Afiliado</span>
+                </div>
+                <div class="check-item ${result.checks.establecimiento ? 'pass' : 'fail'}">
+                    <span class="material-symbols-outlined">${result.checks.establecimiento ? 'check_circle' : 'cancel'}</span>
+                    <span>Establecimiento</span>
+                </div>
+                <div class="check-item ${result.checks.vto ? 'pass' : 'fail'}">
+                    <span class="material-symbols-outlined">${result.checks.vto ? 'check_circle' : 'cancel'}</span>
+                    <span>Fecha de Vencimiento</span>
+                </div>
+            </div>
+        `;
+    } else if (checklistContainer) {
+        checklistContainer.style.display = 'none';
+        checklistContainer.innerHTML = '';
+    }
+
+    modal.classList.add('active');
+}
+
+// ============================================================
+// 3. UTILIDADES GENERALES Y MANEJO DEL DOM
+// ============================================================
+
+/**
+ * Convierte un string de fecha en un objeto Date a las 23:59:59.999
  */
 function parseExpirationDate(vtoStr) {
     if (!vtoStr) return null;
@@ -148,13 +487,12 @@ function parseExpirationDate(vtoStr) {
         }
     }
 
-    // Formato MM/YYYY (ej: 08/2026 -> vigencia hasta el último día del mes a las 23:59:59)
+    // Formato MM/YYYY (ej: 08/2026 -> último día del mes)
     if (/^\d{1,2}\/\d{4}$/.test(raw)) {
         const parts = raw.split('/');
         const month = parseInt(parts[0], 10);
         const year = parseInt(parts[1], 10);
         if (month >= 1 && month <= 12 && year > 1900) {
-            // El día 0 del mes siguiente es el último día del mes actual
             return new Date(year, month, 0, 23, 59, 59, 999);
         }
     }
@@ -188,7 +526,7 @@ function isValidDateParts(day, month, year) {
 }
 
 /**
- * Controla el estado de carga (Spinner y deshabilitación del botón)
+ * Controla el estado de carga del formulario manual
  */
 function setLoading(loading) {
     const btn = document.getElementById('btn-submit');
@@ -210,7 +548,31 @@ function setLoading(loading) {
 }
 
 /**
- * Muestra el modal con el resultado
+ * Controla el estado de carga del panel de prueba QR
+ */
+function setQrLoading(loading) {
+    const btn = document.getElementById('btn-qr-verify');
+    const text = document.getElementById('btn-qr-text');
+    const spinner = document.getElementById('btn-qr-spinner');
+    const textarea = document.getElementById('qr-json-input');
+
+    if (!btn) return;
+
+    if (loading) {
+        btn.disabled = true;
+        if (textarea) textarea.disabled = true;
+        if (text) text.style.display = 'none';
+        if (spinner) spinner.style.display = 'block';
+    } else {
+        btn.disabled = false;
+        if (textarea) textarea.disabled = false;
+        if (text) text.style.display = 'block';
+        if (spinner) spinner.style.display = 'none';
+    }
+}
+
+/**
+ * Muestra el modal para la consulta manual
  */
 function showModal(stateClass, statusText, iconName, messageText) {
     const modal = document.getElementById('result-modal');
@@ -218,10 +580,14 @@ function showModal(stateClass, statusText, iconName, messageText) {
     const icon = document.getElementById('status-icon');
     const statusEl = document.getElementById('status-text');
     const msgEl = document.getElementById('modal-message');
+    const checklistContainer = document.getElementById('qr-checklist-container');
 
-    // Limpiar clases de estado anteriores
+    if (checklistContainer) {
+        checklistContainer.style.display = 'none';
+        checklistContainer.innerHTML = '';
+    }
+
     card.className = 'modal-card ' + stateClass;
-
     icon.textContent = iconName;
     statusEl.textContent = statusText;
     msgEl.textContent = messageText;
@@ -230,23 +596,54 @@ function showModal(stateClass, statusText, iconName, messageText) {
 }
 
 /**
- * Cierra el modal de respuesta y resetea el campo DNI
+ * Cierra el modal de respuesta
  */
 function closeModal() {
     const modal = document.getElementById('result-modal');
     modal.classList.remove('active');
     
     const input = document.getElementById('dni-input');
-    input.value = '';
-    setTimeout(() => {
-        input.focus();
-    }, 200);
+    if (input) {
+        input.value = '';
+        setTimeout(() => {
+            input.focus();
+        }, 200);
+    }
 }
 
 function closeModalOnOverlay(event) {
     if (event.target.id === 'result-modal') {
         closeModal();
     }
+}
+
+/**
+ * Alterna la visibilidad del panel de prueba de JSON QR
+ */
+function toggleQrTestPanel() {
+    const content = document.getElementById('qr-test-content');
+    const arrow = document.getElementById('qr-test-arrow');
+    if (!content) return;
+
+    if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        if (arrow) arrow.textContent = 'expand_less';
+        const textarea = document.getElementById('qr-json-input');
+        if (textarea) setTimeout(() => textarea.focus(), 150);
+    } else {
+        content.style.display = 'none';
+        if (arrow) arrow.textContent = 'expand_more';
+    }
+}
+
+/**
+ * Maneja el botón de verificación del panel de prueba QR
+ */
+function handleQrFormSubmit() {
+    const textarea = document.getElementById('qr-json-input');
+    if (!textarea) return;
+    const rawVal = textarea.value;
+    handleQrPayload(rawVal);
 }
 
 /**
@@ -265,3 +662,11 @@ function showToast(message) {
         toast.classList.remove('show');
     }, 3000);
 }
+
+// Exponer en el ámbito global para interoperabilidad y pruebas
+window.handleQrPayload = handleQrPayload;
+window.verifyQrAgainstDb = verifyQrAgainstDb;
+window.parseQrPayload = parseQrPayload;
+window.normalizeText = normalizeText;
+window.normalizeAffiliateNumber = normalizeAffiliateNumber;
+window.normalizeToIsoDate = normalizeToIsoDate;

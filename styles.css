@@ -111,7 +111,7 @@ body {
     padding: 24px 28px 32px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
     margin-top: -10px;
     z-index: 10;
     box-shadow: 0 10px 30px -5px rgba(22, 50, 79, 0.08);
@@ -140,7 +140,7 @@ body {
 #check-form {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
 }
 
 .input-group {
@@ -185,7 +185,7 @@ body {
     font-size: 15px;
 }
 
-/* Button */
+/* Submit Button */
 .btn-gold {
     width: 100%;
     height: 56px;
@@ -231,6 +231,118 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* QR Test Section (Phase B1) */
+.qr-test-panel {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(22, 50, 79, 0.04);
+}
+
+.btn-toggle-qr-test {
+    width: 100%;
+    padding: 14px 18px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 700;
+    font-family: var(--font-main);
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s ease;
+}
+
+.btn-toggle-qr-test:hover {
+    background-color: rgba(30, 95, 175, 0.04);
+}
+
+.btn-toggle-qr-test .icon-qr-lead {
+    font-size: 22px;
+}
+
+.btn-toggle-qr-test .toggle-text {
+    flex: 1;
+}
+
+.btn-toggle-qr-test .arrow-icon {
+    font-size: 20px;
+    color: var(--text-secondary);
+}
+
+.qr-test-content {
+    padding: 0 16px 16px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.qr-test-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 12px 0 8px;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.qr-json-textarea {
+    width: 100%;
+    background-color: var(--field-bg);
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-main);
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.qr-json-textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(30, 95, 175, 0.12);
+}
+
+.qr-test-actions {
+    margin-top: 10px;
+}
+
+.btn-qr-verify {
+    width: 100%;
+    height: 44px;
+    background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+    border: none;
+    border-radius: 22px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(37, 169, 214, 0.25);
+    cursor: pointer;
+    outline: none;
+    font-family: var(--font-main);
+    letter-spacing: 0.04em;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.btn-qr-verify:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+}
+
+.btn-qr-verify:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* Footer */
 .card-footer {
     text-align: center;
@@ -263,7 +375,7 @@ body {
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 20px;
     opacity: 0;
     transition: opacity 0.25s ease;
 }
@@ -278,9 +390,9 @@ body {
     border: 1px solid var(--border-color);
     color: var(--text-main);
     border-radius: 24px;
-    padding: 32px 24px;
+    padding: 28px 22px;
     width: 100%;
-    max-width: 360px;
+    max-width: 380px;
     text-align: center;
     box-shadow: 0 20px 40px rgba(22, 50, 79, 0.18);
     display: flex;
@@ -288,6 +400,8 @@ body {
     align-items: center;
     transform: scale(0.9);
     transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .modal-overlay.active .modal-card {
@@ -295,12 +409,12 @@ body {
 }
 
 .status-badge-container {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .icon-circle {
-    width: 80px;
-    height: 80px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -309,37 +423,37 @@ body {
 }
 
 .icon-circle span {
-    font-size: 48px;
+    font-size: 42px;
 }
 
 .modal-title {
     font-family: var(--font-title);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 /* Status Box */
 .status-box {
     width: 100%;
-    padding: 16px 20px;
-    border-radius: 16px;
-    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    margin-bottom: 12px;
     border: 2px solid transparent;
 }
 
 .status-text {
     font-family: var(--font-title);
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 800;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
 }
 
 /* Status Variants */
-/* ACTIVO */
+/* ACTIVO / VÁLIDO */
 .modal-card.state-activo .icon-circle {
     background: var(--active-green-bg);
     color: var(--active-green);
@@ -350,7 +464,7 @@ body {
     color: var(--active-green);
 }
 
-/* INACTIVO */
+/* INACTIVO / NO VÁLIDO */
 .modal-card.state-inactivo .icon-circle {
     background: var(--inactive-red-bg);
     color: var(--inactive-red);
@@ -384,21 +498,61 @@ body {
 }
 
 .modal-message {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-secondary);
     line-height: 1.5;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     font-weight: 500;
+}
+
+/* QR Checklist Box */
+.qr-checklist-container {
+    width: 100%;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+.checklist-grid {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+}
+
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.check-item span.material-symbols-outlined {
+    font-size: 18px;
+}
+
+.check-item.pass {
+    color: var(--active-green);
+}
+
+.check-item.fail {
+    color: var(--inactive-red);
 }
 
 .btn-modal-close {
     width: 100%;
-    height: 48px;
-    border-radius: 24px;
+    height: 46px;
+    border-radius: 23px;
     border: none;
     background: var(--primary);
     color: #FFFFFF;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     font-family: var(--font-main);
     letter-spacing: 0.04em;
