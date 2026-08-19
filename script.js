@@ -500,11 +500,17 @@ function verifyQrAgainstDb(qrPayload, dbData, queriedDni) {
     const isDateValid = expirationEnd !== null && !isNaN(expirationEnd.getTime());
     const isNotExpired = isDateValid && now <= expirationEnd;
 
-    // 4. Comparar cada campo
+    // 4. Comparar cada campo contra los datos disponibles del registro oficial
     const dniMatches = queriedDni === qrPayload.dni;
-    const nameMatches = normalizeText(qrPayload.nombre) === normalizeText(dbData.nombre);
-    const affiliateMatches = normalizeAffiliateNumber(qrPayload.afiliado) === normalizeAffiliateNumber(dbData.nroAfiliado);
-    const establishmentMatches = normalizeText(qrPayload.establecimiento) === normalizeText(dbData.establecimiento);
+    const nameMatches = (dbData.nombre !== undefined && dbData.nombre !== null && dbData.nombre !== '') 
+        ? normalizeText(qrPayload.nombre) === normalizeText(dbData.nombre) 
+        : true;
+    const affiliateMatches = (dbData.nroAfiliado !== undefined && dbData.nroAfiliado !== null && dbData.nroAfiliado !== '') 
+        ? normalizeAffiliateNumber(qrPayload.afiliado) === normalizeAffiliateNumber(dbData.nroAfiliado) 
+        : true;
+    const establishmentMatches = (dbData.establecimiento !== undefined && dbData.establecimiento !== null && dbData.establecimiento !== '') 
+        ? normalizeText(qrPayload.establecimiento) === normalizeText(dbData.establecimiento) 
+        : true;
     
     // Comparación de fechas normalizadas ISO (YYYY-MM-DD)
     const qrIsoDate = normalizeToIsoDate(qrPayload.vto);
@@ -681,9 +687,10 @@ function parseExpirationDate(vtoStr) {
         return null;
     }
 
-    // Formato ISO YYYY-MM-DD (ej: 2026-08-10)
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-        const parts = raw.split('-');
+    // Formato ISO YYYY-MM-DD o con hora (ej: 2026-08-10 o 2026-08-10T...)
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+        const datePart = raw.split('T')[0];
+        const parts = datePart.split('-');
         const year = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10);
         const day = parseInt(parts[2], 10);
@@ -691,6 +698,17 @@ function parseExpirationDate(vtoStr) {
             return new Date(year, month - 1, day, 23, 59, 59, 999);
         }
         return null;
+    }
+
+    // Fallback: Date constructor estándar para formatos como "Thu Dec 31 2026 00:00:00 GMT-0300"
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        if (isValidDateParts(day, month, year)) {
+            return new Date(year, month - 1, day, 23, 59, 59, 999);
+        }
     }
 
     return null;
