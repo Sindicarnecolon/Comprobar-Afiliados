@@ -33,8 +33,19 @@
         <main class="main-card">
             <header class="card-header">
                 <h1 class="title-h1">Comprobación de Afiliados</h1>
-                <p class="subtitle-text">Ingrese el DNI del afiliado para verificar la vigencia de su credencial.</p>
+                <p class="subtitle-text">Verifique la vigencia y autenticidad de la credencial digital mediante código QR o número de DNI.</p>
             </header>
+
+            <!-- QR Scanner Activation Button (Primary Action) -->
+            <button type="button" id="btn-open-scanner" class="btn-scan-qr" onclick="openQrScanner()">
+                <span class="material-symbols-outlined icon-scan-btn">qr_code_scanner</span>
+                <span class="scan-btn-title">ESCANEAR CREDENCIAL QR</span>
+            </button>
+
+            <!-- Separator -->
+            <div class="divider-or">
+                <span>O CONSULTAR POR DNI</span>
+            </div>
 
             <!-- Manual Form (Preserved) -->
             <form id="check-form" onsubmit="handleCheckSubmit(event)" novalidate>
@@ -56,20 +67,20 @@
 
                 <!-- Submit Button -->
                 <button type="submit" id="btn-submit" class="btn-gold">
-                    <span id="btn-text">COMPROBAR</span>
+                    <span id="btn-text">COMPROBAR DNI</span>
                     <div id="btn-spinner" class="spinner" style="display: none;"></div>
                 </button>
             </form>
 
-            <!-- Test Section for QR JSON Verification (Phase B1) -->
+            <!-- Test Section for QR JSON Verification (Phase B1 Test Drawer) -->
             <section class="qr-test-panel">
                 <button type="button" class="btn-toggle-qr-test" onclick="toggleQrTestPanel()">
-                    <span class="material-symbols-outlined icon-qr-lead">qr_code_2</span>
-                    <span class="toggle-text">Verificar con código QR (JSON)</span>
+                    <span class="material-symbols-outlined icon-qr-lead">code</span>
+                    <span class="toggle-text">Prueba directa de JSON QR</span>
                     <span id="qr-test-arrow" class="material-symbols-outlined arrow-icon">expand_more</span>
                 </button>
                 <div id="qr-test-content" class="qr-test-content" style="display: none;">
-                    <p class="qr-test-desc">Pegue el contenido JSON del código QR para cotejarlo contra la base de datos:</p>
+                    <p class="qr-test-desc">Pegue el JSON del código QR para validarlo contra el motor de verificación:</p>
                     <textarea 
                         id="qr-json-input" 
                         class="qr-json-textarea" 
@@ -80,7 +91,7 @@
                     ></textarea>
                     <div class="qr-test-actions">
                         <button type="button" id="btn-qr-verify" class="btn-qr-verify" onclick="handleQrFormSubmit()">
-                            <span id="btn-qr-text">VERIFICAR QR</span>
+                            <span id="btn-qr-text">VERIFICAR JSON</span>
                             <div id="btn-qr-spinner" class="spinner" style="display: none;"></div>
                         </button>
                     </div>
@@ -92,6 +103,43 @@
                 <p class="small-hint">Verificación instantánea para comercios y convenios</p>
             </footer>
         </main>
+    </div>
+
+    <!-- QR SCANNER VIEWPORT MODAL (FASE C) -->
+    <div id="qr-scanner-modal" class="modal-overlay scanner-overlay" onclick="closeQrScannerOnOverlay(event)">
+        <div class="scanner-card" onclick="event.stopPropagation()">
+            <div class="scanner-header">
+                <div class="scanner-title-group">
+                    <span class="material-symbols-outlined scanner-icon-header">qr_code_scanner</span>
+                    <h2 class="scanner-title">Escanear Credencial</h2>
+                </div>
+                <button type="button" class="btn-scanner-close" onclick="closeQrScanner()" title="Cerrar escáner">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <!-- Camera Viewport Container -->
+            <div class="scanner-viewport-wrapper">
+                <div id="qr-reader" class="qr-reader-container"></div>
+                <div class="scanner-reticle">
+                    <div class="scanner-laser-line"></div>
+                    <div class="corner corner-tl"></div>
+                    <div class="corner corner-tr"></div>
+                    <div class="corner corner-bl"></div>
+                    <div class="corner corner-br"></div>
+                </div>
+            </div>
+
+            <!-- Status / Instructions -->
+            <div class="scanner-instructions">
+                <p id="scanner-status-msg">Enfoque el código QR de la credencial dentro del recuadro</p>
+            </div>
+
+            <!-- Cancel / Close Action -->
+            <button type="button" class="btn-scanner-cancel" onclick="closeQrScanner()">
+                CANCELAR
+            </button>
+        </div>
     </div>
 
     <!-- RESULT MODAL DIALOG -->
@@ -129,6 +177,8 @@
         <span id="toast-message">Por favor ingrese un DNI válido.</span>
     </div>
 
+    <!-- Local QR Scanner Library (No CDN Dependency) -->
+    <script src="html5-qrcode.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

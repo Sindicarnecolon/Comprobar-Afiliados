@@ -3,6 +3,7 @@
  *  Web de Comprobación de Estado de Afiliados
  *  Mi Credencial Online
  *  Motor de Consulta Manual + Verificación de Códigos QR
+ *  Integración con Lector QR por Cámara (FASE C)
  * ============================================================
  */
 
@@ -133,7 +134,136 @@ function processResult(data) {
 }
 
 // ============================================================
-// 2. MOTOR DE VERIFICACIÓN DE CÓDIGO QR (FASE B1)
+// 2. CONTROLADOR DEL ESCÁNER QR POR CÁMARA (FASE C)
+// ============================================================
+
+let html5QrCodeScanner = null;
+let isScannerActive = false;
+let isProcessingScan = false;
+
+/**
+ * Abre el visor e inicializa la cámara para escanear el QR
+ */
+async function openQrScanner() {
+    const modal = document.getElementById('qr-scanner-modal');
+    const statusMsg = document.getElementById('scanner-status-msg');
+    
+    if (!modal) return;
+    
+    if (typeof Html5Qrcode === 'undefined') {
+        showToast('El módulo de escáner QR no se encuentra disponible.');
+        return;
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    
+    if (statusMsg) {
+        statusMsg.textContent = 'Iniciando cámara...';
+    }
+
+    isProcessingScan = false;
+
+    try {
+        if (!html5QrCodeScanner) {
+            html5QrCodeScanner = new Html5Qrcode('qr-reader');
+        }
+
+        const qrConfig = {
+            fps: 10,
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                const edgeSize = Math.floor(minEdge * 0.75);
+                return { width: edgeSize, height: edgeSize };
+            },
+            aspectRatio: 1.0
+        };
+
+        // Preferir cámara trasera del dispositivo móvil
+        await html5QrCodeScanner.start(
+            { facingMode: 'environment' },
+            qrConfig,
+            onQrCodeSuccess,
+            onQrCodeError
+        );
+
+        isScannerActive = true;
+        if (statusMsg) {
+            statusMsg.textContent = 'Enfoque el código QR de la credencial dentro del recuadro';
+        }
+    } catch (err) {
+        console.error('[Scanner QR] Error al acceder a la cámara:', err);
+        isScannerActive = false;
+        
+        let userMessage = 'No fue posible acceder a la cámara.';
+        const errStr = String(err).toLowerCase();
+        if (errStr.includes('notallowederror') || errStr.includes('permission')) {
+            userMessage = 'Permiso de cámara denegado. Habilite el acceso para escanear.';
+        } else if (errStr.includes('notfounderror') || errStr.includes('devicesnotfound')) {
+            userMessage = 'No se detectó ninguna cámara disponible en el dispositivo.';
+        } else if (errStr.includes('notsupportederror') || !window.isSecureContext) {
+            userMessage = 'El escaneo por cámara requiere conexión segura (HTTPS).';
+        }
+
+        if (statusMsg) {
+            statusMsg.textContent = userMessage;
+        }
+        showToast(userMessage);
+    }
+}
+
+/**
+ * Callback ejecutado al leer exitosamente un código QR
+ */
+async function onQrCodeSuccess(decodedText, decodedResult) {
+    if (isProcessingScan) return; // Prevenir lecturas múltiples simultáneas
+    isProcessingScan = true;
+
+    // 1. Detener cámara y cerrar visor inmediatamente
+    await closeQrScanner();
+
+    // 2. Entregar el contenido directamente al motor existente de la FASE B1
+    handleQrPayload(decodedText);
+}
+
+/**
+ * Callback de error por frame (ignorado durante el barrido continuo)
+ */
+function onQrCodeError(errorMessage) {
+    // Normal mientras no se enfoca un código
+}
+
+/**
+ * Detiene la cámara y cierra el visor liberando todos los recursos
+ */
+async function closeQrScanner() {
+    const modal = document.getElementById('qr-scanner-modal');
+    
+    if (html5QrCodeScanner && isScannerActive) {
+        try {
+            await html5QrCodeScanner.stop();
+        } catch (e) {
+            console.warn('[Scanner QR] Advertencia al detener scanner:', e);
+        }
+        isScannerActive = false;
+    }
+
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 250);
+    }
+}
+
+function closeQrScannerOnOverlay(event) {
+    if (event.target.id === 'qr-scanner-modal') {
+        closeQrScanner();
+    }
+}
+
+// ============================================================
+// 3. MOTOR DE VERIFICACIÓN DE CÓDIGO QR (FASE B1 / C)
 // ============================================================
 
 /**
@@ -465,7 +595,7 @@ function showQrResultModal(result) {
 }
 
 // ============================================================
-// 3. UTILIDADES GENERALES Y MANEJO DEL DOM
+// 4. UTILIDADES GENERALES Y MANEJO DEL DOM
 // ============================================================
 
 /**
@@ -664,6 +794,11 @@ function showToast(message) {
 }
 
 // Exponer en el ámbito global para interoperabilidad y pruebas
+window.openQrScanner = openQrScanner;
+window.closeQrScanner = closeQrScanner;
+window.closeQrScannerOnOverlay = closeQrScannerOnOverlay;
+window.onQrCodeSuccess = onQrCodeSuccess;
+window.onQrCodeError = onQrCodeError;
 window.handleQrPayload = handleQrPayload;
 window.verifyQrAgainstDb = verifyQrAgainstDb;
 window.parseQrPayload = parseQrPayload;
