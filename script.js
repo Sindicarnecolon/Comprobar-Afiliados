@@ -3,7 +3,7 @@
  *  Web de Comprobación de Estado de Afiliados
  *  Mi Credencial Online
  *  Motor de Consulta Manual + Verificación de Códigos QR
- *  Integración con Lector QR por Cámara (FASE C)
+ *  Integración con Lector QR por Cámara (FASE C / D - Endurecido)
  * ============================================================
  */
 
@@ -34,8 +34,8 @@ async function handleCheckSubmit(event) {
     setLoading(true);
 
     try {
-        // Consulta por DNI al Apps Script
-        let response = await fetch(`${API_URL}?dni=${encodeURIComponent(cleanDni)}`);
+        // Consulta por DNI al Apps Script con timeout seguro de 15 segundos
+        let response = await fetchWithTimeout(`${API_URL}?dni=${encodeURIComponent(cleanDni)}`);
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}`);
         }
@@ -43,7 +43,7 @@ async function handleCheckSubmit(event) {
 
         // Si la versión actual del script requiere nombre, reintentar con comodín '*'
         if (!data.success && data.message && (data.message.includes('faltantes') || data.message.includes('obligatorios'))) {
-            response = await fetch(`${API_URL}?dni=${encodeURIComponent(cleanDni)}&nombre=*`);
+            response = await fetchWithTimeout(`${API_URL}?dni=${encodeURIComponent(cleanDni)}&nombre=*`);
             if (response.ok) {
                 data = await response.json();
             }
@@ -134,17 +134,20 @@ function processResult(data) {
 }
 
 // ============================================================
-// 2. CONTROLADOR DEL ESCÁNER QR POR CÁMARA (FASE C)
+// 2. CONTROLADOR DEL ESCÁNER QR POR CÁMARA (FASE C / D)
 // ============================================================
 
 let html5QrCodeScanner = null;
 let isScannerActive = false;
+let isScannerStarting = false;
 let isProcessingScan = false;
 
 /**
  * Abre el visor e inicializa la cámara para escanear el QR
  */
 async function openQrScanner() {
+    if (isScannerStarting || isScannerActive) return;
+
     const modal = document.getElementById('qr-scanner-modal');
     const statusMsg = document.getElementById('scanner-status-msg');
     
@@ -155,6 +158,7 @@ async function openQrScanner() {
         return;
     }
 
+    isScannerStarting = true;
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('active'), 10);
     
@@ -201,7 +205,7 @@ async function openQrScanner() {
             userMessage = 'Permiso de cámara denegado. Habilite el acceso para escanear.';
         } else if (errStr.includes('notfounderror') || errStr.includes('devicesnotfound')) {
             userMessage = 'No se detectó ninguna cámara disponible en el dispositivo.';
-        } else if (errStr.includes('notsupportederror') || !window.isSecureContext) {
+        } else if (errStr.includes('notsupportederror') || (typeof window !== 'undefined' && !window.isSecureContext)) {
             userMessage = 'El escaneo por cámara requiere conexión segura (HTTPS).';
         }
 
@@ -209,6 +213,8 @@ async function openQrScanner() {
             statusMsg.textContent = userMessage;
         }
         showToast(userMessage);
+    } finally {
+        isScannerStarting = false;
     }
 }
 
@@ -222,7 +228,7 @@ async function onQrCodeSuccess(decodedText, decodedResult) {
     // 1. Detener cámara y cerrar visor inmediatamente
     await closeQrScanner();
 
-    // 2. Entregar el contenido directamente al motor existente de la FASE B1
+    // 2. Entregar el contenido directamente al motor de verificación
     handleQrPayload(decodedText);
 }
 
@@ -234,7 +240,7 @@ function onQrCodeError(errorMessage) {
 }
 
 /**
- * Detiene la cámara y cierra el visor liberando todos los recursos
+ * Detiene la cámara y cierra el visor liberando todos los recursos de hardware
  */
 async function closeQrScanner() {
     const modal = document.getElementById('qr-scanner-modal');
@@ -254,6 +260,8 @@ async function closeQrScanner() {
             modal.style.display = 'none';
         }, 250);
     }
+
+    isScannerStarting = false;
 }
 
 function closeQrScannerOnOverlay(event) {
@@ -262,8 +270,24 @@ function closeQrScannerOnOverlay(event) {
     }
 }
 
+// Liberar cámara si la pestaña se oculta o se abandona
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && isScannerActive) {
+            closeQrScanner();
+        }
+    });
+}
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('pagehide', () => {
+        if (isScannerActive) {
+            closeQrScanner();
+        }
+    });
+}
+
 // ============================================================
-// 3. MOTOR DE VERIFICACIÓN DE CÓDIGO QR (FASE B1 / C)
+// 3. MOTOR DE VERIFICACIÓN DE CÓDIGO QR (FASE B1 / D)
 // ============================================================
 
 /**
@@ -299,11 +323,16 @@ function normalizeToIsoDate(vtoStr) {
 }
 
 /**
- * Valida y parsea la cadena JSON del QR de forma controlada
+ * Valida y parsea la cadena JSON del QR de forma controlada y con defensas estrictas
  */
 function parseQrPayload(rawInput) {
     if (rawInput === null || rawInput === undefined) {
         return { valid: false, error: 'No se recibieron datos de código QR.' };
+    }
+
+    // Límite de tamaño para prevenir ataques de denegación de servicio por memoria
+    if (typeof rawInput === 'string' && rawInput.length > 4096) {
+        return { valid: false, error: 'El tamaño de los datos del código QR supera el límite seguro.' };
     }
 
     let parsed;
@@ -327,11 +356,14 @@ function parseQrPayload(rawInput) {
         return { valid: false, error: 'Estructura de QR no válida.' };
     }
 
-    // Comprobar campos obligatorios
+    // Comprobar campos obligatorios y que no sean objetos anidados
     const requiredFields = ['dni', 'nombre', 'afiliado', 'establecimiento', 'vto'];
     for (const field of requiredFields) {
         if (!(field in parsed) || parsed[field] === null || parsed[field] === undefined) {
             return { valid: false, error: `Campo obligatorio ausente en el QR: "${field}".` };
+        }
+        if (typeof parsed[field] === 'object') {
+            return { valid: false, error: `Formato de dato no válido en el campo "${field}".` };
         }
     }
 
@@ -342,23 +374,24 @@ function parseQrPayload(rawInput) {
     }
 
     const nombreStr = String(parsed.nombre).trim();
-    if (!nombreStr) {
-        return { valid: false, error: 'El campo nombre en el QR está vacío.' };
+    if (!nombreStr || nombreStr.length > 150) {
+        return { valid: false, error: 'El campo nombre en el QR es inválido o excede la longitud permitida.' };
     }
 
     const afiliadoStr = String(parsed.afiliado).trim();
-    if (!afiliadoStr) {
-        return { valid: false, error: 'El campo número de afiliado en el QR está vacío.' };
+    if (!afiliadoStr || afiliadoStr.length > 60) {
+        return { valid: false, error: 'El campo número de afiliado en el QR es inválido o excede la longitud permitida.' };
     }
 
     const estabStr = String(parsed.establecimiento).trim();
-    if (!estabStr) {
-        return { valid: false, error: 'El campo establecimiento en el QR está vacío.' };
+    if (!estabStr || estabStr.length > 150) {
+        return { valid: false, error: 'El campo establecimiento en el QR es inválido o excede la longitud permitida.' };
     }
 
     const vtoStr = String(parsed.vto).trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(vtoStr) && !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(vtoStr) && !/^\d{1,2}\/\d{4}$/.test(vtoStr)) {
-        return { valid: false, error: 'El campo fecha de vencimiento en el QR no posee un formato reconocido.' };
+    const parsedVtoDate = parseExpirationDate(vtoStr);
+    if (!parsedVtoDate || isNaN(parsedVtoDate.getTime())) {
+        return { valid: false, error: 'El campo fecha de vencimiento en el QR contiene una fecha inválida.' };
     }
 
     return {
@@ -396,8 +429,8 @@ async function handleQrPayload(rawJson) {
     setQrLoading(true);
 
     try {
-        // 2. Reutilizar la consulta exacta existente al Google Apps Script
-        let response = await fetch(`${API_URL}?dni=${encodeURIComponent(cleanDni)}`);
+        // 2. Reutilizar la consulta exacta existente al Google Apps Script con timeout
+        let response = await fetchWithTimeout(`${API_URL}?dni=${encodeURIComponent(cleanDni)}`);
         if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}`);
         }
@@ -405,7 +438,7 @@ async function handleQrPayload(rawJson) {
 
         // Fallback transparente si se solicita nombre
         if (!dbData.success && dbData.message && (dbData.message.includes('faltantes') || dbData.message.includes('obligatorios'))) {
-            response = await fetch(`${API_URL}?dni=${encodeURIComponent(cleanDni)}&nombre=*`);
+            response = await fetchWithTimeout(`${API_URL}?dni=${encodeURIComponent(cleanDni)}&nombre=*`);
             if (response.ok) {
                 dbData = await response.json();
             }
@@ -599,6 +632,25 @@ function showQrResultModal(result) {
 // ============================================================
 
 /**
+ * Envoltorio fetch con timeout para evitar bloqueos
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+    if (typeof AbortController === 'undefined') {
+        return fetch(url, options);
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+    }
+}
+
+/**
  * Convierte un string de fecha en un objeto Date a las 23:59:59.999
  */
 function parseExpirationDate(vtoStr) {
@@ -615,6 +667,7 @@ function parseExpirationDate(vtoStr) {
         if (isValidDateParts(day, month, year)) {
             return new Date(year, month - 1, day, 23, 59, 59, 999);
         }
+        return null;
     }
 
     // Formato MM/YYYY (ej: 08/2026 -> último día del mes)
@@ -622,27 +675,22 @@ function parseExpirationDate(vtoStr) {
         const parts = raw.split('/');
         const month = parseInt(parts[0], 10);
         const year = parseInt(parts[1], 10);
-        if (month >= 1 && month <= 12 && year > 1900) {
+        if (month >= 1 && month <= 12 && year > 1900 && year < 2100) {
             return new Date(year, month, 0, 23, 59, 59, 999);
         }
+        return null;
     }
 
     // Formato ISO YYYY-MM-DD (ej: 2026-08-10)
-    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-        const datePart = raw.split('T')[0];
-        const parts = datePart.split('-');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        const parts = raw.split('-');
         const year = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10);
         const day = parseInt(parts[2], 10);
         if (isValidDateParts(day, month, year)) {
             return new Date(year, month - 1, day, 23, 59, 59, 999);
         }
-    }
-
-    // Fallback: Date constructor estándar
-    const d = new Date(raw);
-    if (!isNaN(d.getTime())) {
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+        return null;
     }
 
     return null;
@@ -652,6 +700,9 @@ function isValidDateParts(day, month, year) {
     if (month < 1 || month > 12) return false;
     if (day < 1 || day > 31) return false;
     if (year < 1900 || year > 2100) return false;
+    // Comprobar días por mes
+    const maxDays = new Date(year, month, 0).getDate();
+    if (day > maxDays) return false;
     return true;
 }
 
@@ -665,15 +716,15 @@ function setLoading(loading) {
     const input = document.getElementById('dni-input');
 
     if (loading) {
-        btn.disabled = true;
-        input.disabled = true;
-        text.style.display = 'none';
-        spinner.style.display = 'block';
+        if (btn) btn.disabled = true;
+        if (input) input.disabled = true;
+        if (text) text.style.display = 'none';
+        if (spinner) spinner.style.display = 'block';
     } else {
-        btn.disabled = false;
-        input.disabled = false;
-        text.style.display = 'block';
-        spinner.style.display = 'none';
+        if (btn) btn.disabled = false;
+        if (input) input.disabled = false;
+        if (text) text.style.display = 'block';
+        if (spinner) spinner.style.display = 'none';
     }
 }
 
@@ -706,7 +757,7 @@ function setQrLoading(loading) {
  */
 function showModal(stateClass, statusText, iconName, messageText) {
     const modal = document.getElementById('result-modal');
-    const card = modal.querySelector('.modal-card');
+    const card = modal ? modal.querySelector('.modal-card') : null;
     const icon = document.getElementById('status-icon');
     const statusEl = document.getElementById('status-text');
     const msgEl = document.getElementById('modal-message');
@@ -717,12 +768,12 @@ function showModal(stateClass, statusText, iconName, messageText) {
         checklistContainer.innerHTML = '';
     }
 
-    card.className = 'modal-card ' + stateClass;
-    icon.textContent = iconName;
-    statusEl.textContent = statusText;
-    msgEl.textContent = messageText;
+    if (card) card.className = 'modal-card ' + stateClass;
+    if (icon) icon.textContent = iconName;
+    if (statusEl) statusEl.textContent = statusText;
+    if (msgEl) msgEl.textContent = messageText;
 
-    modal.classList.add('active');
+    if (modal) modal.classList.add('active');
 }
 
 /**
@@ -730,7 +781,7 @@ function showModal(stateClass, statusText, iconName, messageText) {
  */
 function closeModal() {
     const modal = document.getElementById('result-modal');
-    modal.classList.remove('active');
+    if (modal) modal.classList.remove('active');
     
     const input = document.getElementById('dni-input');
     if (input) {
@@ -783,6 +834,7 @@ let toastTimeout;
 function showToast(message) {
     const toast = document.getElementById('toast');
     const msg = document.getElementById('toast-message');
+    if (!toast || !msg) return;
     
     msg.textContent = message;
     toast.classList.add('show');
@@ -805,3 +857,5 @@ window.parseQrPayload = parseQrPayload;
 window.normalizeText = normalizeText;
 window.normalizeAffiliateNumber = normalizeAffiliateNumber;
 window.normalizeToIsoDate = normalizeToIsoDate;
+window.fetchWithTimeout = fetchWithTimeout;
+window.isValidDateParts = isValidDateParts;
