@@ -817,35 +817,6 @@ function closeModalOnOverlay(event) {
 }
 
 /**
- * Alterna la visibilidad del panel de prueba de JSON QR
- */
-function toggleQrTestPanel() {
-    const content = document.getElementById('qr-test-content');
-    const arrow = document.getElementById('qr-test-arrow');
-    if (!content) return;
-
-    if (content.style.display === 'none' || content.style.display === '') {
-        content.style.display = 'block';
-        if (arrow) arrow.textContent = 'expand_less';
-        const textarea = document.getElementById('qr-json-input');
-        if (textarea) setTimeout(() => textarea.focus(), 150);
-    } else {
-        content.style.display = 'none';
-        if (arrow) arrow.textContent = 'expand_more';
-    }
-}
-
-/**
- * Maneja el botón de verificación del panel de prueba QR
- */
-function handleQrFormSubmit() {
-    const textarea = document.getElementById('qr-json-input');
-    if (!textarea) return;
-    const rawVal = textarea.value;
-    handleQrPayload(rawVal);
-}
-
-/**
  * Muestra una notificación Toast flotante
  */
 let toastTimeout;

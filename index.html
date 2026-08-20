@@ -72,32 +72,6 @@
                 </button>
             </form>
 
-            <!-- Test Section for QR JSON Verification (Phase B1 Test Drawer) -->
-            <section class="qr-test-panel">
-                <button type="button" class="btn-toggle-qr-test" onclick="toggleQrTestPanel()">
-                    <span class="material-symbols-outlined icon-qr-lead">code</span>
-                    <span class="toggle-text">Prueba directa de JSON QR</span>
-                    <span id="qr-test-arrow" class="material-symbols-outlined arrow-icon">expand_more</span>
-                </button>
-                <div id="qr-test-content" class="qr-test-content" style="display: none;">
-                    <p class="qr-test-desc">Pegue el JSON del código QR para validarlo contra el motor de verificación:</p>
-                    <textarea 
-                        id="qr-json-input" 
-                        class="qr-json-textarea" 
-                        rows="4" 
-                        placeholder='{"dni":"22222222","nombre":"JUAN PEREZ","afiliado":"123456/0","establecimiento":"Empresa Ejemplo S.A.","vto":"2026-12-31"}'
-                        autocomplete="off"
-                        spellcheck="false"
-                    ></textarea>
-                    <div class="qr-test-actions">
-                        <button type="button" id="btn-qr-verify" class="btn-qr-verify" onclick="handleQrFormSubmit()">
-                            <span id="btn-qr-text">VERIFICAR JSON</span>
-                            <div id="btn-qr-spinner" class="spinner" style="display: none;"></div>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
             <footer class="card-footer">
                 <p>Mi Credencial Online</p>
                 <p class="small-hint">Verificación instantánea para comercios y convenios</p>
